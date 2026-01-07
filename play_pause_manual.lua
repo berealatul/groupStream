@@ -12,12 +12,8 @@ function descriptor()
     }
 end
 
--- Required (even if empty)
-function activate()
-end
-
-function deactivate()
-end
+function activate() end
+function deactivate() end
 
 function menu()
     return {
@@ -37,29 +33,43 @@ function trigger_menu(id)
     end
 end
 
+-- LOW-LEVEL HTTP POST
 function send_event(action)
     vlc.msg.info("SENDING " .. action)
 
-    vlc.net.request({
-        url = "http://" .. state.server_ip .. ":8080/event",
-        method = "POST",
-        headers = {
-            ["Content-Type"] = "application/json"
-        },
-        data = '{"action":"' .. action .. '"}'
-    })
+    local body = '{"action":"' .. action .. '"}'
+    local req =
+        "POST /event HTTP/1.1\r\n" ..
+        "Host: " .. state.server_ip .. ":8080\r\n" ..
+        "Content-Type: application/json\r\n" ..
+        "Content-Length: " .. #body .. "\r\n" ..
+        "\r\n" ..
+        body
+
+    local fd = vlc.net.open("tcp://" .. state.server_ip .. ":8080")
+    fd:write(req)
+    fd:read(1024) -- ignore response
+    fd:close()
 end
 
+-- LOW-LEVEL HTTP GET
 function poll_remote()
-    local response = vlc.net.request({
-        url = "http://" .. state.server_ip .. ":8080/poll",
-        method = "GET"
-    })
+    local req =
+        "GET /poll HTTP/1.1\r\n" ..
+        "Host: " .. state.server_ip .. ":8080\r\n" ..
+        "\r\n"
 
-    if response == "play" then
+    local fd = vlc.net.open("tcp://" .. state.server_ip .. ":8080")
+    fd:write(req)
+    local resp = fd:read(1024)
+    fd:close()
+
+    if not resp then return end
+
+    if resp:find("play") then
         vlc.msg.info("APPLYING REMOTE PLAY")
         vlc.playlist.play()
-    elseif response == "pause" then
+    elseif resp:find("pause") then
         vlc.msg.info("APPLYING REMOTE PAUSE")
         vlc.playlist.pause()
     else
