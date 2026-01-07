@@ -5,7 +5,7 @@
 state = {
     last_playing = false,
     is_remote = false,
-    server_url = "http://10.160.189.122:8080/event"
+    server_ip = "10.160.189.122"
 }
 
 function descriptor()
@@ -19,8 +19,8 @@ function descriptor()
 end
 
 function activate()
-    vlc.msg.info("Sync extension activated")
-    vlc.misc.timer(300, poll)
+    vlc.msg.info("Sync activated")
+    vlc.misc.timer(300, tick)
 end
 
 function deactivate()
@@ -31,16 +31,17 @@ function menu()
 end
 
 function trigger_menu(id)
-    if id == 1 then
-        vlc.msg.info("Sync started")
-    end
+    vlc.msg.info("Sync running")
 end
 
-function poll()
-    if not vlc.input then
-        return
-    end
+function tick()
+    if not vlc.input then return end
 
+    poll_local()
+    poll_remote()
+end
+
+function poll_local()
     local playing = vlc.input.is_playing()
 
     if playing ~= state.last_playing and not state.is_remote then
@@ -50,37 +51,38 @@ function poll()
     state.last_playing = playing
 end
 
+function poll_remote()
+    local response = vlc.net.http.request({
+        url = "http://" .. state.server_ip .. ":8080/poll",
+        method = "GET"
+    })
+
+    if response == "play" or response == "pause" then
+        apply_remote(response)
+    end
+end
+
 function send_event(action)
-    local body = string.format('{"action":"%s"}', action)
+    vlc.msg.info("Sending " .. action)
 
     vlc.net.http.request({
-        url = state.server_url,
+        url = "http://" .. state.server_ip .. ":8080/event",
         method = "POST",
         headers = { "Content-Type: application/json" },
-        data = body
+        data = '{"action":"' .. action .. '"}'
     })
 end
 
 function apply_remote(action)
+    vlc.msg.info("Applying remote " .. action)
+
     state.is_remote = true
 
     if action == "play" then
         vlc.playlist.play()
-    elseif action == "pause" then
+    else
         vlc.playlist.pause()
     end
 
     state.is_remote = false
-end
-
--- Poll server for remote events (simple long-poll)
-function poll_server()
-    local response = vlc.net.http.request({
-        url = "http://10.160.189.122:8080/poll",
-        method = "GET"
-    })
-
-    if response and response ~= "" then
-        apply_remote(response)
-    end
 end
