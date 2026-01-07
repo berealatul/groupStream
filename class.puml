@@ -1,0 +1,62 @@
+@startuml
+
+class User
+
+class SyncExtension {
+  +activate()
+  +deactivate()
+}
+
+class UIController {
+  +showDialog()
+  +onJoinGroup()
+  +onStartSync()
+}
+
+class PlaybackController {
+  +play()
+  +pause()
+  +seek(time)
+  +getTime()
+  +isPlaying()
+}
+
+class SyncClient {
+  +connect(groupId)
+  +sendEvent(event)
+  +receiveEvent(event)
+}
+
+class StateManager {
+  -isRemoteEvent
+  -lastPlaying
+  -lastTime
+  +markRemote()
+  +clearRemote()
+  +shouldBroadcast()
+}
+
+class Event {
+  +groupId
+  +action
+  +time
+  +senderId
+}
+
+User --> UIController : interacts
+
+SyncExtension --> UIController
+SyncExtension --> PlaybackController
+SyncExtension --> SyncClient
+SyncExtension --> StateManager
+
+UIController --> SyncClient
+UIController --> PlaybackController
+
+PlaybackController --> StateManager
+PlaybackController --> SyncClient
+
+SyncClient --> PlaybackController
+SyncClient --> StateManager
+
+@enduml

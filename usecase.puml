@@ -1,0 +1,37 @@
+@startuml
+left to right direction
+
+actor "User" as User
+
+rectangle "VLC Sync Extension" {
+
+    usecase "Join Group" as UC1
+    usecase "Load Video File" as UC2
+    usecase "Play Video" as UC3
+    usecase "Pause Video" as UC4
+    usecase "Seek Video" as UC5
+
+    usecase "Send Playback Event" as UC6
+    usecase "Receive Playback Event" as UC7
+    usecase "Apply Remote Command" as UC8
+    usecase "Prevent Event Loop" as UC9
+    usecase "Poll Playback State" as UC10
+}
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+
+UC3 --> UC6 : <<include>>
+UC4 --> UC6 : <<include>>
+UC5 --> UC6 : <<include>>
+
+UC7 --> UC8 : <<include>>
+UC8 --> UC9 : <<include>>
+
+UC6 --> UC10 : <<include>>
+UC10 --> UC6 : <<include>>
+
+@enduml
